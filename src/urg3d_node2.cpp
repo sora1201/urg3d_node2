@@ -605,7 +605,7 @@ bool Urg3dNode2::create_scan_message2(sensor_msgs::msg::PointCloud2 & msg)
         // PointCloud2 メッセージ初期化
         msg.header.frame_id = frame_id_;
         //bug?//msg.header.stamp = rclcpp::Time(measurement_data_.timestamp_ms);
-        msg.header.stamp = rclcpp::Time( static_cast<int64_t>( measurement_data_.timestamp_ms * 1e6) );
+        msg.header.stamp = rclcpp::Time(get_clock()->now());
         msg.row_step = 0;
         msg.width = 0;
     }

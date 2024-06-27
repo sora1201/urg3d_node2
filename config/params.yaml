@@ -9,8 +9,8 @@ urg3d_node2:
     output_cycle: 'frame'
     publish_intensity: true
     publish_auxiliary: false
-    calibrate_time : false
-    synchronize_time : false
+    calibrate_time : true
+    synchronize_time : true
     error_limit : 4
     error_reset_period : 10.0
     diagnostics_tolerance : 0.05
