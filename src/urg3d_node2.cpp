@@ -49,6 +49,7 @@ Urg3dNode2::Urg3dNode2(const rclcpp::NodeOptions & node_options)
   diagnostics_tolerance_ = declare_parameter<double>("diagnostics_tolerance", 0.05);
   diagnostics_window_time_ = declare_parameter<double>("diagnostics_window_time", 5.0);
   time_offset_ = declare_parameter<double>("time_offset", 0.0);
+  field_ = declare_parameter<std::string>("field", "XYZI");
 }
 
 // デストラクタ
@@ -71,6 +72,7 @@ Urg3dNode2::CallbackReturn Urg3dNode2::on_configure(const rclcpp_lifecycle::Stat
 
     // Publisher設定
     scan_pub_2 = create_publisher<sensor_msgs::msg::PointCloud2>("hokuyo_cloud2", rclcpp::QoS(20));
+    // scan_pub_2 = create_publisher<sensor_msgs::msg::PointCloud2>("hokuyo_cloud2", rclcpp::QoS(1).best_effort());
     imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", rclcpp::QoS(20));
     mag_pub_ = create_publisher<sensor_msgs::msg::MagneticField>("mag", rclcpp::QoS(20));
     temp_pub_ = create_publisher<sensor_msgs::msg::Temperature>("temp", rclcpp::QoS(20));
@@ -215,6 +217,7 @@ void Urg3dNode2::initialize()
     diagnostics_tolerance_ = get_parameter("diagnostics_tolerance").as_double();
     diagnostics_window_time_ = get_parameter("diagnostics_window_time").as_double();
     time_offset_ = get_parameter("time_offset").as_double();
+    field_ = get_parameter("field").as_string();
 
     // 内部変数初期化
     is_connected_ = false;
@@ -236,9 +239,20 @@ void Urg3dNode2::initialize()
     cloud2_.is_bigendian = false;
     cloud2_.is_dense = false;
     sensor_msgs::PointCloud2Modifier pc2_modifier(cloud2_);
-    pc2_modifier.setPointCloud2Fields(4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, 
-        sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
-        "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+    if (field_ == "XYZI")
+    {
+        pc2_modifier.setPointCloud2Fields(4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, 
+            sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+            "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
+    }
+    else if (field_ == "XYZIRC")
+    {
+        pc2_modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, 
+            sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+            "intensity", 1, sensor_msgs::msg::PointField::UINT8, "return_type", 1, sensor_msgs::msg::PointField::UINT8,
+            "channel", 1, sensor_msgs::msg::PointField::UINT16);
+    }
 
     // サイクル設定
     if (output_cycle_.compare("frame") == 0)
@@ -633,10 +647,21 @@ bool Urg3dNode2::create_scan_message2(sensor_msgs::msg::PointCloud2 & msg)
                 continue;
             }
 
-            *(data++) = measurement_data_.spots[spot].point[0].x_m;
-            *(data++) = measurement_data_.spots[spot].point[0].y_m;
-            *(data++) = measurement_data_.spots[spot].point[0].z_m;
-            *(data++) = measurement_data_.spots[spot].point[0].intensity;
+            if (field_ == "XYZI")
+            {
+                *(data++) = measurement_data_.spots[spot].point[0].x_m;
+                *(data++) = measurement_data_.spots[spot].point[0].y_m;
+                *(data++) = measurement_data_.spots[spot].point[0].z_m;
+                *(data++) = measurement_data_.spots[spot].point[0].intensity;
+            }
+
+            if (field_ == "XYZIRC") 
+            {
+                *(data++) = measurement_data_.spots[spot].point[0].x_m;
+                *(data++) = measurement_data_.spots[spot].point[0].y_m;
+                *(data++) = measurement_data_.spots[spot].point[0].z_m;
+                *(data++) = 0.0; // 32bit分 intensity=uint8, return=uint8, channel=uint16 よって，32bit．dataはfloat32なので，0.0を入れれば，すべて反映できる．
+            }
 
             msg.width++;
         }     

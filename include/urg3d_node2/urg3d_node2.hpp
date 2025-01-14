@@ -331,6 +331,8 @@ private:
   double diagnostics_window_time_;
   /** パラメータ"time_offset" : ユーザレイテンシ[sec] */
   double time_offset_;
+  /** パラメータ"field" : PointCloudフィールド['XYZI', 'XYZIRC'] */
+  std::string field_;
   
   /** ベンダ名 */
   std::string vendor_name_;
